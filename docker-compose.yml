@@ -1,0 +1,60 @@
+version: "3.5"
+services:
+  api:
+    image: sample-api:${TAG:-latest}
+    build: 
+      context: .
+      args:
+        BUILD: ${BUILD_NAME:-0}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown} 
+    labels:
+      maintainer: "datascientists@realestate.com" 
+    environment:
+      - VERSION=${TAG:-1}
+      - PYTHON_ENV=${ENVIRON:-develop}
+      - SERVICE_NAME="{{.Service.Name}}"
+      - READ_TIMEOUT=${READ_TIMEOUT:-180}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=10", "--waitretry=3", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+    deploy:
+      mode: replicated
+      replicas: ${REPLICAS:-3}
+      resources:
+        limits:
+          memory: 3G
+          cpus:   '3'
+      update_config:
+         parallelism: 1
+         delay: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    volumes: 
+      - "/${PWD}/model:/app/model"
+      - "/${PWD}/logs:/app/logs"  
+    networks:
+      - network
+    # secrets:
+    #   - source: model-scoring-api.secret
+    # configs:
+    #   - source: model-scoring-api.config
+
+networks:
+  network:
+    driver: overlay 
+
+# secrets:
+#   model-scoring-api.secret:
+#     name: model-scoring-api.secret
+#     external: true
+      
+# configs:
+#   model-scoring-api.config:
+#     name: model-scoring-api.config
+#     external: true
