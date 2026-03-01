@@ -43,11 +43,41 @@ docker run -d \
 ```
 
 What this does:
-  - Mounts model directory (/model) into the container, enabling model versioning without rebuilding the image.
+  - Mounts model directory (`/model`) into the container, enabling model versioning without rebuilding the image.
   - Mounts logs directory (/logs), allows prediction logs and shadow results to persist outside the container.
   - Exposes port 8080, making the API available at: `http://localhost:8080`
   - Starts 3 Gunicorn workers for parallel request handling.
   - Sets the production model version.
+
+### Why We Mount the `/model` Directory
+
+Separate application code from model artifacts by mounting the local `model/` directory into the container:
+
+```bash
+-v "/${PWD}/model:/app/model"
+```
+
+**Why This Matters**
+
+This enables:
+  - Faster model updates
+  - Quicker experimentation
+  - Easy A/B or shadow testing
+  - Reduced deployment friction
+  - Smaller, more stable Docker images
+
+Without mounting:
+  - The trained model would be baked into the Docker image.
+  - Any time we retrain or update the model, we would need to:
+    1. Rebuild the Docker image
+    2. Push it to a registry
+    3. Redeploy the container
+
+With mounting:
+  - The container image stays the same.
+  - You can simply replace or add a new model file in the `model/` folder.
+  - Restarting the container picks up the new version.
+
 
 ## View the container logs
 
@@ -56,13 +86,6 @@ Useful for performance debugging and monitoring.
 ```bash
 docker logs -f sample-api-container
 ```
-
-This streams:
-  - Request logs
-  - Prediction outputs
-  - Shadow model results (if enabled)
-  - Errors
-  - Latency information
 
 ## Testing the API
 
